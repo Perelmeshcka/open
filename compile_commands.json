@@ -1,0 +1,19 @@
+[
+  {
+    "file": "src/open.c",
+    "arguments": [
+      "/usr/bin/gcc",
+      "-Wall",
+      "-Wextra",
+      "-std=c99",
+      "-g",
+      "-I/opt/homebrew/Cellar/raylib/6.0/include",
+      "-c",
+      "src/open.c",
+      "-o",
+      "src/open.o"
+    ],
+    "directory": "/Users/yarik/Documents/truth/open",
+    "output": "src/open.o"
+  }
+]

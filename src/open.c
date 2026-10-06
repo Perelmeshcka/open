@@ -314,8 +314,8 @@ void DrawBSP(bspnode *node, u32 *u)
     if (vis)
       DrawWall(w);
     ++u[w.sec];
-    // if (u[w.sec] == secs[w.sec].len)
-      // DrawSec(secs[w.sec]);
+    if (u[w.sec] == secs[w.sec].len)
+      DrawSec(secs[w.sec]);
     
     return;
   }
@@ -330,16 +330,16 @@ void DrawBSP(bspnode *node, u32 *u)
       if (vis)
         DrawWall(w);
       ++u[w.sec];
-      // if (u[w.sec] == secs[w.sec].len)
-        // DrawSec(secs[w.sec]);
+      if (u[w.sec] == secs[w.sec].len)
+        DrawSec(secs[w.sec]);
       DrawBSP(node->front, u);
     } else {
       DrawBSP(node->front, u);
       if (vis)
         DrawWall(w);
       ++u[w.sec];
-      // if (u[w.sec] == secs[w.sec].len)
-        // DrawSec(secs[w.sec]);
+      if (u[w.sec] == secs[w.sec].len)
+        DrawSec(secs[w.sec]);
     }
 
     return;
@@ -350,16 +350,16 @@ void DrawBSP(bspnode *node, u32 *u)
     if (vis)
       DrawWall(w);
     ++u[w.sec];
-    // if (u[w.sec] == secs[w.sec].len)
-      // DrawSec(secs[w.sec]);
+    if (u[w.sec] == secs[w.sec].len)
+      DrawSec(secs[w.sec]);
     DrawBSP(node->front, u);
   } else {
     DrawBSP(node->front, u);
     if (vis)
       DrawWall(w);
     ++u[w.sec];
-    // if (u[w.sec] == secs[w.sec].len)
-      // DrawSec(secs[w.sec]);
+    if (u[w.sec] == secs[w.sec].len)
+      DrawSec(secs[w.sec]);
     DrawBSP(node->back, u);
   }
 }

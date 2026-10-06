@@ -42,6 +42,7 @@ typedef struct sector
   iv3   *b;
   wall  *w;
   u32   len;
+  iv2   cen;
   Color tc;
   Color bc;
 } sector;

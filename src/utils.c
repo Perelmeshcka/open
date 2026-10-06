@@ -57,7 +57,7 @@ iv3 camcrd(iv3 t, pos cam)
   t.y -= cam.y;
   t.z -= cam.z;
 
-  int x = t.x, y = t.y, z = t.z;
+  dbl x = t.x, y = t.y, z = t.z;
 
   x = t.x * T.cos[cam.a] - t.y * T.sin[cam.a];
   y = t.x * T.sin[cam.a] + t.y * T.cos[cam.a];

@@ -243,11 +243,20 @@ sector initsec(iv3 *b, u32 len, dbl h,
       .sec = n,
     };
   }
+
+  iv2 cen = {0, 0};
+  for (u32 i = 0; i < len; ++i) {
+    cen.x += b[i].x;
+    cen.y += b[i].y;
+  }
+  cen.x = cen.x / len;
+  cen.y = cen.y / len;
   
   sector res = {
     .b   = b,
     .w   = w,
     .len = len,
+    .cen = cen,
     .bc  = bc,
     .tc  = tc,
   };
@@ -306,9 +315,12 @@ void DrawBSP(bspnode *node, u32 *u)
     return;
 
   wall w = node->w;
-  iv3 wac = camcrd(w.a, P);
-  iv3 wbc = camcrd(w.b, P);
-  bool vis = atan2(wac.y, wac.x) > atan2(wbc.y, wbc.x);
+  iv2 p = {P.x, P.y};
+  iv2 wa = {w.a.x, w.a.y};
+  iv2 wb = {w.b.x, w.b.y};
+  iv3 l = through(wa, wb);
+  
+  bool vis = lval(p, l) * lval(secs[w.sec].cen, l) < EPS;
 
   if (node->back == NULL && node->front == NULL) {
     if (vis)
@@ -320,11 +332,6 @@ void DrawBSP(bspnode *node, u32 *u)
     return;
   }
 
-  iv2 p = {P.x, P.y};
-  iv2 wa = {w.a.x, w.a.y};
-  iv2 wb = {w.b.x, w.b.y};
-  iv3 l = through(wa, wb);
-  
   if (node->back == NULL) {
     if (lval(p, l) > EPS) {
       if (vis)

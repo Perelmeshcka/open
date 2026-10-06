@@ -71,7 +71,14 @@ iv3 camcrd(iv3 t, pos cam);
 iv2 calcproj(iv3 t, dbl f);
 int angle(int deg);
 void init(void);
-iv3 *clipseg(iv3 ac, iv3 bc);
+
+typedef struct poly {
+  iv3 *v;
+  u32 len;
+} poly;
+
+poly clipseg(iv3 ac, iv3 bc);
+poly clippol(iv3 *pol, u32 len);
 bool equal(iv3 a, iv3 b);
 dbl walldist(wall w);
 iv3 through(iv2 a, iv2 b);

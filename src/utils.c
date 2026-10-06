@@ -107,10 +107,15 @@ void init(void)
   P.l = 0;
 }
 
-iv3 *clipseg(iv3 ac, iv3 bc)
+poly clipseg(iv3 ac, iv3 bc)
 {
+  poly res = {
+    .v   = NULL,
+    .len = 0,
+  };
+  
   if (ac.y < NEAR && bc.y < NEAR)
-    return NULL;
+    return res;
 
   if (ac.y < NEAR) {
     dbl dy = bc.y - ac.y, dx = bc.x - ac.x, dz = bc.z - ac.z;
@@ -134,9 +139,48 @@ iv3 *clipseg(iv3 ac, iv3 bc)
     bc.z = ac.z - ndz;
   }
 
-  iv3 *res = (iv3 *)calloc(2, sizeof(iv3));
-  res[0] = ac;
-  res[1] = bc;
+  res.v = (iv3 *)calloc(2, sizeof(iv3));
+  res.v[0] = ac;
+  res.v[1] = bc;
+  res.len = 2;
+
+  return res;
+}
+
+poly clippol(iv3 *pol, u32 len)
+{
+  iv3 a, b;
+  bool ain, bin;
+  iv3 *seg;
+
+  poly res = {
+    .v   = (iv3 *)calloc(len * 2, sizeof(iv3)),
+    .len = 0,
+  };
+  
+  for (u32 i = 0; i < len; ++i) {
+    a = pol[i];
+    b = pol[(i + 1) % len];
+
+    ain = a.y >= NEAR;
+    bin = b.y >= NEAR;
+
+    if (!ain && !bin)
+      continue;
+    if (ain != bin) {
+      seg = clipseg(a, b).v;
+      if (seg == NULL)
+        continue;
+      a = seg[0];
+      b = seg[1];
+      free(seg);
+    }
+    
+    if (res.len == 0 || !equal(a, res.v[res.len - 1]))
+      res.v[res.len++] = a;
+    if (res.len == 0 || !equal(b, res.v[0]))
+      res.v[res.len++] = b;
+  }
 
   return res;
 }

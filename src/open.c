@@ -47,7 +47,7 @@ void DrawSegm(iv3 a, iv3 b, Color col)
   iv3 ac = camcrd(a, P);
   iv3 bc = camcrd(b, P);
 
-  iv3 *clip = clipseg(ac, bc);
+  iv3 *clip = clipseg(ac, bc).v;
 
   if (clip == NULL)
     return;
@@ -68,42 +68,14 @@ void DrawWall(wall w)
   for (u32 i = 0; i < 4; ++i)
     wc[i] = camcrd(wc[i], P);
 
-  iv3 a, b;
-  iv3 *seg;
-  bool ain, bin;
+  poly clip = clippol(wc, 4);
 
-  iv3 clip[5];
-  u32 clen = 0;
+  iv2 *proj = (iv2 *)calloc(clip.len, sizeof(iv2));
+  for (u32 i = 0; i < clip.len; ++i)
+    proj[i] = calcproj(clip.v[i], FOCUS);
 
-  for (u32 i = 0; i < 4; ++i) {
-    a = wc[i];
-    b = wc[(i + 1) % 4];
-
-    ain = a.y >= NEAR;
-    bin = b.y >= NEAR;
-
-    if (!ain && !bin)
-      continue;
-    if (ain != bin) {
-      seg = clipseg(a, b);
-      if (seg == NULL)
-        continue;
-      a = seg[0];
-      b = seg[1];
-      free(seg);
-    }
-    
-    if (clen == 0 || !equal(a, clip[clen - 1]))
-      clip[clen++] = a;
-    if (clen == 0 || !equal(b, clip[0]))
-      clip[clen++] = b;
-  }
-
-  iv2 *proj = (iv2 *)calloc(clen, sizeof(iv2));
-  for (u32 i = 0; i < clen; ++i)
-    proj[i] = calcproj(clip[i], FOCUS);
-
-  DrawBigPoly(proj, clen, w.c);
+  DrawBigPoly(proj, clip.len, w.c);
+  free(clip.v);
   free(proj);
 }
 
@@ -126,25 +98,31 @@ void DrawSec(sector sec)
   for (u32 i = 0; i < sec.len; ++i)
     side[i] = camcrd(side[i], P);
 
-  iv2 *pol = (iv2 *)calloc(sec.len, sizeof(iv2));
-  for (u32 i = 0; i < sec.len; ++i)
-    pol[i] = calcproj(side[i], FOCUS);
-
-  DrawBigPoly(pol, sec.len, c);
+  poly clip = clippol(side, sec.len);
   free(side);
+
+  if (clip.v == NULL)
+    return;
+
+  iv2 *pol = (iv2 *)calloc(clip.len, sizeof(iv2));
+  for (u32 i = 0; i < clip.len; ++i)
+    pol[i] = calcproj(clip.v[i], FOCUS);
+
+  DrawBigPoly(pol, clip.len, c);
   free(pol);
+  free(clip.v);
 }
 
 typedef struct bspnode
 {
-  wall *w;
+  wall w;
   void *front;
   void *back;
 } bspnode;
 
 bspnode *root;
 
-bspnode *bsp(u32 *idx, u32 len, wall **walls, u32 *wlen)
+bspnode *bsp(u32 *idx, u32 len, wall *walls, u32 *wlen)
 {
   if (len == 0)
     return NULL;
@@ -159,8 +137,8 @@ bspnode *bsp(u32 *idx, u32 len, wall **walls, u32 *wlen)
   if (len == 1)
     return res;
   
-  iv2 la = {(*walls[del]).a.x, (*walls[del]).a.y};
-  iv2 lb = {(*walls[del]).b.x, (*walls[del]).b.y};
+  iv2 la = {(walls[del]).a.x, (walls[del]).a.y};
+  iv2 lb = {(walls[del]).b.x, (walls[del]).b.y};
   iv3 l = through(la, lb);
 
   u32 *front = (u32 *)calloc(len, sizeof(u32));
@@ -178,7 +156,7 @@ bspnode *bsp(u32 *idx, u32 len, wall **walls, u32 *wlen)
     if (wi == del)
       continue;
     
-    cur = *walls[wi];
+    cur = walls[wi];
     a = (iv2){ cur.a.x, cur.a.y };
     b = (iv2){ cur.b.x, cur.b.y };
     aval = lval(a, l);
@@ -204,8 +182,7 @@ bspnode *bsp(u32 *idx, u32 len, wall **walls, u32 *wlen)
       back[blen++] = wi;
     if (ain != bin) {
       m = cross(l, through(a, b));
-      walls[*wlen] = malloc(sizeof(wall));
-      *walls[*wlen] = cur;
+      walls[*wlen] = cur;
       ++(*wlen);
 
       dx = b.x - a.x;
@@ -220,8 +197,8 @@ bspnode *bsp(u32 *idx, u32 len, wall **walls, u32 *wlen)
         ndz = dz * ndy / dy;
       mz = cur.b.z - ndz;
 
-      (*walls[wi]).b = (iv3){m.x, m.y, mz};
-      (*walls[*wlen - 1]).a = (iv3){m.x, m.y, mz};
+      walls[wi].b = (iv3){m.x, m.y, mz};
+      walls[*wlen - 1].a = (iv3){m.x, m.y, mz};
 
       if (ain) {
         front[flen++] = wi;
@@ -285,8 +262,8 @@ void initwalls(void)
   
   iv3 *b0 = (iv3 *)calloc(3, sizeof(iv3));
   b0[0] = (iv3){10, 10, 0};
-  b0[1] = (iv3){10, 100, 0};
-  b0[2] = (iv3){100, 100, 0};
+  b0[1] = (iv3){100, 10, 0};
+  b0[2] = (iv3){50, 100, 0};
   Color *c0 = (Color *)calloc(3, sizeof(Color));
   c0[0] = YELLOW;
   c0[1] = BLUE;
@@ -296,9 +273,9 @@ void initwalls(void)
 
   iv3 *b1 = (iv3 *)calloc(4, sizeof(iv3));
   b1[0] = (iv3){200, 10, 0};
-  b1[1] = (iv3){200, 100, 0};
+  b1[1] = (iv3){260, 10, 0};
   b1[2] = (iv3){250, 90, 0};
-  b1[3] = (iv3){260, 10, 0};
+  b1[3] = (iv3){200, 100, 0};
   Color *c1 = (Color *)calloc(4, sizeof(Color));
   c1[0] = YELLOW;
   c1[1] = BLUE;
@@ -308,12 +285,12 @@ void initwalls(void)
   free(c1);
 
   u32 wl = 0;
-  wall **w = (wall **)calloc(100, sizeof(wall *));
+  wall *w = (wall *)calloc(100, sizeof(wall));
 
   u32 i, j;
   for (i = 0; i < slen; ++i)
     for (j = 0; j < secs[i].len; ++j)
-      w[wl++] = secs[i].w + j;
+      w[wl++] = secs[i].w[j];
 
   u32 *range = (u32 *)calloc(wl, sizeof(u32));
   for (i = 0; i < wl; ++i)
@@ -328,35 +305,41 @@ void DrawBSP(bspnode *node, u32 *u)
   if (node == NULL)
     return;
 
-  wall w = *node->w;
-  
+  wall w = node->w;
+  iv3 wac = camcrd(w.a, P);
+  iv3 wbc = camcrd(w.b, P);
+  bool vis = atan2(wac.y, wac.x) > atan2(wbc.y, wbc.x);
+
   if (node->back == NULL && node->front == NULL) {
-    DrawWall(w);
+    if (vis)
+      DrawWall(w);
     ++u[w.sec];
-    if (u[w.sec] == secs[w.sec].len)
-      DrawSec(secs[w.sec]);
+    // if (u[w.sec] == secs[w.sec].len)
+      // DrawSec(secs[w.sec]);
     
     return;
   }
 
   iv2 p = {P.x, P.y};
-  iv2 wa = {node->w->a.x, node->w->a.y};
-  iv2 wb = {node->w->b.x, node->w->b.y};
+  iv2 wa = {w.a.x, w.a.y};
+  iv2 wb = {w.b.x, w.b.y};
   iv3 l = through(wa, wb);
   
   if (node->back == NULL) {
     if (lval(p, l) > EPS) {
-      DrawWall(*node->w);
+      if (vis)
+        DrawWall(w);
       ++u[w.sec];
-      if (u[w.sec] == secs[w.sec].len)
-        DrawSec(secs[w.sec]);
+      // if (u[w.sec] == secs[w.sec].len)
+        // DrawSec(secs[w.sec]);
       DrawBSP(node->front, u);
     } else {
       DrawBSP(node->front, u);
-      DrawWall(*node->w);
+      if (vis)
+        DrawWall(w);
       ++u[w.sec];
-      if (u[w.sec] == secs[w.sec].len)
-        DrawSec(secs[w.sec]);
+      // if (u[w.sec] == secs[w.sec].len)
+        // DrawSec(secs[w.sec]);
     }
 
     return;
@@ -364,24 +347,26 @@ void DrawBSP(bspnode *node, u32 *u)
   
   if (lval(p, l) > EPS) {
     DrawBSP(node->back, u);
-    DrawWall(*node->w);
+    if (vis)
+      DrawWall(w);
     ++u[w.sec];
-    if (u[w.sec] == secs[w.sec].len)
-      DrawSec(secs[w.sec]);
+    // if (u[w.sec] == secs[w.sec].len)
+      // DrawSec(secs[w.sec]);
     DrawBSP(node->front, u);
   } else {
     DrawBSP(node->front, u);
-    DrawWall(*node->w);
+    if (vis)
+      DrawWall(w);
     ++u[w.sec];
-    if (u[w.sec] == secs[w.sec].len)
-      DrawSec(secs[w.sec]);
+    // if (u[w.sec] == secs[w.sec].len)
+      // DrawSec(secs[w.sec]);
     DrawBSP(node->back, u);
   }
 }
 
 void DrawScene(void)
 {
-  u32 *used = (u32 *)calloc(slen, sizeof(bool));
+  u32 *used = (u32 *)calloc(slen, sizeof(u32));
   for (u32 i = 0; i < slen; ++i)
     used[i] = 0;
   DrawBSP(root, used);

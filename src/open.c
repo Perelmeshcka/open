@@ -122,6 +122,9 @@ typedef struct bspnode
 
 bspnode *root;
 
+sector *secs;
+u32 slen;
+
 bspnode *bsp(u32 *idx, u32 len, wall *walls, u32 *wlen)
 {
   if (len == 0)
@@ -199,6 +202,7 @@ bspnode *bsp(u32 *idx, u32 len, wall *walls, u32 *wlen)
 
       walls[wi].b = (iv3){m.x, m.y, mz};
       walls[*wlen - 1].a = (iv3){m.x, m.y, mz};
+      ++secs[cur.sec].n;
 
       if (ain) {
         front[flen++] = wi;
@@ -227,9 +231,6 @@ void freebsp(bspnode *node)
   free(node);
 }
 
-sector *secs;
-u32 slen;
-
 sector initsec(iv3 *b, u32 len, dbl h,
                Color *c, Color tc, Color bc, u32 n)
 {
@@ -256,6 +257,7 @@ sector initsec(iv3 *b, u32 len, dbl h,
     .b   = b,
     .w   = w,
     .len = len,
+    .n   = len,
     .cen = cen,
     .bc  = bc,
     .tc  = tc,
@@ -326,7 +328,7 @@ void DrawBSP(bspnode *node, u32 *u)
     if (vis)
       DrawWall(w);
     ++u[w.sec];
-    if (u[w.sec] == secs[w.sec].len)
+    if (u[w.sec] == secs[w.sec].n)
       DrawSec(secs[w.sec]);
     
     return;
@@ -337,7 +339,7 @@ void DrawBSP(bspnode *node, u32 *u)
       if (vis)
         DrawWall(w);
       ++u[w.sec];
-      if (u[w.sec] == secs[w.sec].len)
+      if (u[w.sec] == secs[w.sec].n)
         DrawSec(secs[w.sec]);
       DrawBSP(node->front, u);
     } else {
@@ -345,7 +347,7 @@ void DrawBSP(bspnode *node, u32 *u)
       if (vis)
         DrawWall(w);
       ++u[w.sec];
-      if (u[w.sec] == secs[w.sec].len)
+      if (u[w.sec] == secs[w.sec].n)
         DrawSec(secs[w.sec]);
     }
 
@@ -357,7 +359,7 @@ void DrawBSP(bspnode *node, u32 *u)
     if (vis)
       DrawWall(w);
     ++u[w.sec];
-    if (u[w.sec] == secs[w.sec].len)
+    if (u[w.sec] == secs[w.sec].n)
       DrawSec(secs[w.sec]);
     DrawBSP(node->front, u);
   } else {
@@ -365,7 +367,7 @@ void DrawBSP(bspnode *node, u32 *u)
     if (vis)
       DrawWall(w);
     ++u[w.sec];
-    if (u[w.sec] == secs[w.sec].len)
+    if (u[w.sec] == secs[w.sec].n)
       DrawSec(secs[w.sec]);
     DrawBSP(node->back, u);
   }
@@ -373,6 +375,7 @@ void DrawBSP(bspnode *node, u32 *u)
 
 void DrawScene(void)
 {
+  ClearBackground(DARKBLUE);
   u32 *used = (u32 *)calloc(slen, sizeof(u32));
   for (u32 i = 0; i < slen; ++i)
     used[i] = 0;
@@ -392,7 +395,6 @@ int main(void)
     Move(2, 10);
     
     BeginDrawing();
-      ClearBackground(DARKBLUE);
       DrawScene();
     EndDrawing();
   }
